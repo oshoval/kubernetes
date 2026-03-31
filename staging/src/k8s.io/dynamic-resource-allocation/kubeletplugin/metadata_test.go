@@ -359,6 +359,53 @@ func TestProcessPreparedClaim(t *testing.T) {
 	}
 }
 
+func TestProcessPreparedClaimDigitLeadingUIDUsesCDIV050(t *testing.T) {
+	w, _, cdiDir := newTestWriter(t)
+	claim := testClaim()
+	claim.UID = types.UID("3314d6f8-b86c-46b7-a56a-cd42072e1b32")
+
+	devices := []Device{{
+		Requests:   []string{"vf"},
+		PoolName:   "node-1",
+		DeviceName: "vf-0",
+	}}
+
+	cdiIDs, err := w.processPreparedClaim(claim, devices)
+	if err != nil {
+		t.Fatalf("processPreparedClaim: %v", err)
+	}
+
+	cdiPath := filepath.Join(cdiDir, testDriverName+"_metadata_"+string(claim.UID)+"_vf.json")
+	cdiData, err := os.ReadFile(cdiPath)
+	if err != nil {
+		t.Fatalf("read CDI spec %s: %v", cdiPath, err)
+	}
+
+	var gotCDISpec cdiSpec
+	if err := json.Unmarshal(cdiData, &gotCDISpec); err != nil {
+		t.Fatalf("unmarshal CDI spec: %v", err)
+	}
+
+	if gotCDISpec.Version != cdiVersionStr {
+		t.Fatalf("unexpected CDI version %q, want %q", gotCDISpec.Version, cdiVersionStr)
+	}
+	if len(gotCDISpec.Devices) != 1 {
+		t.Fatalf("expected 1 CDI device, got %d", len(gotCDISpec.Devices))
+	}
+	if len(cdiIDs) != 1 {
+		t.Fatalf("expected 1 CDI ID, got %d", len(cdiIDs))
+	}
+
+	expectedName := string(claim.UID) + "_vf"
+	if gotCDISpec.Devices[0].Name != expectedName {
+		t.Fatalf("unexpected CDI device name %q, want %q", gotCDISpec.Devices[0].Name, expectedName)
+	}
+	expectedID := testDriverName + "/metadata=" + expectedName
+	if gotID := cdiIDs["vf"]; gotID != expectedID {
+		t.Fatalf("unexpected CDI ID %q, want %q", gotID, expectedID)
+	}
+}
+
 func TestCleanupClaim(t *testing.T) {
 	strVal := "0000:03:00.0"
 

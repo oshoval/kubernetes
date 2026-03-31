@@ -101,7 +101,10 @@ const (
 	// DefaultCDIDir is the default directory for CDI spec files.
 	DefaultCDIDir = "/var/run/cdi"
 
-	cdiVersionStr     = "0.3.0"
+	// v0.5.0 is required when CDI device names may start with a non-letter.
+	// Metadata device names are derived from claim UID + request name, and
+	// claim UIDs can start with digits.
+	cdiVersionStr     = "0.5.0"
 	metadataFilePerms = os.FileMode(0644)
 	metadataDirPerms  = os.FileMode(0755)
 )
